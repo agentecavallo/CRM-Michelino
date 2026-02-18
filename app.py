@@ -195,7 +195,8 @@ with st.expander("➕ REGISTRA NUOVA VISITA", expanded=False):
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1: st.date_input("Data", datetime.now(), key="data_key")
-    with c2: st.selectbox("Agente", ["HSE", "BIENNE", "PALAGI", "SARDEGNA"], key="agente_key")
+    # NUOVA LISTA AGENTI INSERIMENTO
+    with c2: st.selectbox("Agente", ["Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"], key="agente_key")
     
     st.text_area("Note", key="note_key", height=150)
     st.write("📅 **Pianifica Ricontatto:**")
@@ -249,7 +250,8 @@ st.subheader("🔍 Archivio Visite")
 f1, f2, f3, f4, f5 = st.columns([1.5, 1, 1, 1, 1])
 t_ricerca = f1.text_input("Cerca Cliente o Città")
 periodo = f2.date_input("Periodo", [datetime.now() - timedelta(days=60), datetime.now()])
-f_agente = f3.selectbox("Filtra Agente", ["Tutti", "HSE", "BIENNE", "PALAGI", "SARDEGNA"])
+# NUOVA LISTA AGENTI FILTRO
+f_agente = f3.selectbox("Filtra Agente", ["Tutti", "Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"])
 f_tipo = f4.selectbox("Filtra Tipo", ["Tutti", "Prospect", "Cliente"])
 # Nuovo Filtro per Stato CRM
 f_stato_crm = f5.selectbox("Stato CRM", ["Tutti", "Da Caricare", "Caricati"])
@@ -303,7 +305,8 @@ if st.session_state.ricerca_attiva:
                     except: idx_tp = 0
                     new_tipo = st.selectbox("Stato", lista_tp, index=idx_tp, key=f"e_tp_{row['id']}")
 
-                    lista_agenti = ["HSE", "BIENNE", "PALAGI", "SARDEGNA"]
+                    # NUOVA LISTA AGENTI MODIFICA
+                    lista_agenti = ["Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"]
                     try: idx_ag = lista_agenti.index(row['agente'])
                     except: idx_ag = 0
                     new_agente = st.selectbox("Agente", lista_agenti, index=idx_ag, key=f"e_ag_{row['id']}")
@@ -414,7 +417,7 @@ with st.expander("🛠️ AMMINISTRAZIONE E BACKUP"):
                 # Legge il file excel
                 df_ripristino = pd.read_excel(file_caricato)
                 
-                # Verifica che sia un file valido (deve avere la colonna cliente)
+                # Verifica che sia un file valido (deve avere la columna cliente)
                 if 'cliente' in df_ripristino.columns:
                     with sqlite3.connect('crm_mobile.db') as conn:
                         c = conn.cursor()
@@ -457,5 +460,4 @@ with col_f2:
         st.image("logo.jpg", use_container_width=True)
         st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; font-weight: bold;'>CRM MICHELONE APPROVED</p>", unsafe_allow_html=True)
     except Exception:
-
         st.info("✅ Michelone Approved")
