@@ -8,9 +8,27 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from streamlit_js_eval import get_geolocation
 import streamlit.components.v1 as components
+import base64
 
 # --- 1. CONFIGURAZIONE E DATABASE ---
 st.set_page_config(page_title="CRM Michelino", page_icon="💼", layout="centered")
+
+# --- FUNZIONE PER AUDIO AUTOPLAY ---
+def autoplay_audio(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
+            data = f.read()
+            b64 = base64.b64encode(data).decode()
+            # Tag audio con autoplay e tipo mpeg
+            md = f"""
+                <audio autoplay>
+                <source src="data:audio/mpeg;base64,{b64}" type="audio/mpeg">
+                </audio>
+                """
+            st.markdown(md, unsafe_allow_html=True)
+
+# Esecuzione audio all'apertura (File aggiornato a .mpeg)
+autoplay_audio("crm.mpeg")
 
 # Inizializzazione chiavi di stato
 if 'lat_val' not in st.session_state: st.session_state.lat_val = ""
@@ -195,7 +213,6 @@ with st.expander("➕ REGISTRA NUOVA VISITA", expanded=False):
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1: st.date_input("Data", datetime.now(), key="data_key")
-    # NUOVA LISTA AGENTI INSERIMENTO
     with c2: st.selectbox("Agente", ["Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"], key="agente_key")
     
     st.text_area("Note", key="note_key", height=150)
@@ -246,14 +263,11 @@ if not df_scadenze.empty:
 # --- RICERCA E ARCHIVIO ---
 st.subheader("🔍 Archivio Visite")
 
-# FILTRI DI RICERCA
 f1, f2, f3, f4, f5 = st.columns([1.5, 1, 1, 1, 1])
 t_ricerca = f1.text_input("Cerca Cliente o Città")
 periodo = f2.date_input("Periodo", [datetime.now() - timedelta(days=60), datetime.now()])
-# NUOVA LISTA AGENTI FILTRO
 f_agente = f3.selectbox("Filtra Agente", ["Tutti", "Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"])
 f_tipo = f4.selectbox("Filtra Tipo", ["Tutti", "Prospect", "Cliente"])
-# Nuovo Filtro per Stato CRM
 f_stato_crm = f5.selectbox("Stato CRM", ["Tutti", "Da Caricare", "Caricati"])
 
 if st.button("🔎 CERCA VISITE", use_container_width=True):
@@ -264,7 +278,6 @@ if st.session_state.ricerca_attiva:
     with sqlite3.connect('crm_mobile.db') as conn:
         df = pd.read_sql_query("SELECT * FROM visite ORDER BY data_ordine DESC", conn)
     
-    # APPLICAZIONE FILTRI
     if t_ricerca:
         df = df[df['cliente'].str.contains(t_ricerca, case=False) | df['localita'].str.contains(t_ricerca, case=False)]
     if f_agente != "Tutti":
@@ -272,9 +285,7 @@ if st.session_state.ricerca_attiva:
     if f_tipo != "Tutti":
         df = df[df['tipo_cliente'] == f_tipo]
     
-    # Logica filtro CRM
     if f_stato_crm == "Da Caricare":
-        # Filtra dove copiato_crm è 0 oppure NULL
         df = df[(df['copiato_crm'] == 0) | (df['copiato_crm'].isnull())]
     elif f_stato_crm == "Caricati":
         df = df[df['copiato_crm'] == 1]
@@ -289,28 +300,22 @@ if st.session_state.ricerca_attiva:
             st.rerun()
 
         for _, row in df.iterrows():
-            # Icona verde se salvato su CRM
             icona_crm = "✅" if row.get('copiato_crm') == 1 else ""
             badge_tipo = f"[{row['tipo_cliente']}]" if row['tipo_cliente'] else ""
             
             with st.expander(f"{icona_crm} {row['data']} - {row['cliente']} {badge_tipo}"):
                 
-                # --- MODALITÀ MODIFICA ---
                 if st.session_state.edit_mode_id == row['id']:
                     st.info("✏️ Modifica Dati")
                     new_cliente = st.text_input("Cliente", value=row['cliente'], key=f"e_cli_{row['id']}")
-                    
                     lista_tp = ["Prospect", "Cliente"]
                     try: idx_tp = lista_tp.index(row['tipo_cliente'])
                     except: idx_tp = 0
                     new_tipo = st.selectbox("Stato", lista_tp, index=idx_tp, key=f"e_tp_{row['id']}")
-
-                    # NUOVA LISTA AGENTI MODIFICA
                     lista_agenti = ["Galli", "Barchetti", "Bettucci", "E.R.", "Mion", "Saccon", "BAÙ"]
                     try: idx_ag = lista_agenti.index(row['agente'])
                     except: idx_ag = 0
                     new_agente = st.selectbox("Agente", lista_agenti, index=idx_ag, key=f"e_ag_{row['id']}")
-                    
                     new_loc = st.text_input("Località", value=row['localita'], key=f"e_loc_{row['id']}")
                     new_prov = st.text_input("Prov.", value=row['provincia'], max_chars=2, key=f"e_prov_{row['id']}")
                     new_note = st.text_area("Note", value=row['note'], height=100, key=f"e_note_{row['id']}")
@@ -333,28 +338,18 @@ if st.session_state.ricerca_attiva:
                     if cc.button("❌ ANNULLA", key=f"canc_{row['id']}", use_container_width=True):
                         st.session_state.edit_mode_id = None
                         st.rerun()
-                
-                # --- MODALITÀ VISUALIZZAZIONE ---
                 else:
                     st.write(f"**Stato:** {row['tipo_cliente']} | **Agente:** {row['agente']}")
                     st.write(f"**Località:** {row['localita']} ({row['provincia']})")
-                    
                     st.write("**Note:**")
                     col_note, col_copia = st.columns([2, 1])
                     with col_note:
                         st.info(row['note'])
                     with col_copia:
-                        # Tasto Copia
                         copia_negli_appunti(row['note'].replace("`", "'"), row['id'])
-                        
-                        st.write("") # Spaziatura
-                        
-                        # Checkbox Salvato su CRM
+                        st.write("") 
                         is_copied = True if row.get('copiato_crm') == 1 else False
-                        
-                        # Checkbox interattiva
                         check_val = st.checkbox("✅ Salvato su CRM", value=is_copied, key=f"chk_crm_{row['id']}")
-                        
                         if check_val != is_copied:
                             nuovo_val = 1 if check_val else 0
                             with sqlite3.connect('crm_mobile.db') as conn:
@@ -399,65 +394,40 @@ st.divider()
 with st.expander("🛠️ AMMINISTRAZIONE E BACKUP"):
     with sqlite3.connect('crm_mobile.db') as conn:
         df_full = pd.read_sql_query("SELECT * FROM visite", conn)
-    
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_full.to_excel(writer, index=False)
-    
     st.download_button("📥 SCARICA DATABASE (EXCEL)", output.getvalue(), "backup_crm.xlsx", use_container_width=True)
-    
     st.markdown("---")
     st.write("📤 **RIPRISTINO DATI**")
-    st.caption("Carica un backup Excel. ATTENZIONE: i dati attuali verranno sostituiti!")
     file_caricato = st.file_uploader("Seleziona il file Excel di backup", type=["xlsx"])
-    
     if file_caricato is not None:
         if st.button("⚠️ AVVIA RIPRISTINO (Sovrascrive tutto)", type="primary", use_container_width=True):
             try:
-                # Legge il file excel
                 df_ripristino = pd.read_excel(file_caricato)
-                
-                # Verifica che sia un file valido (deve avere la columna cliente)
                 if 'cliente' in df_ripristino.columns:
                     with sqlite3.connect('crm_mobile.db') as conn:
                         c = conn.cursor()
-                        
-                        # 1. CANCELLAZIONE TOTALE TABELLA ESISTENTE
                         c.execute("DROP TABLE IF EXISTS visite")
-                        conn.commit()
-                        
-                        # 2. RICREAZIONE TABELLA PULITA (Con ID AutoIncrement)
-                        # Ricreo la struttura identica a quella iniziale, inclusa la colonna copiato_crm
                         c.execute('''CREATE TABLE visite 
                                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                                       cliente TEXT, localita TEXT, provincia TEXT,
                                       tipo_cliente TEXT, data TEXT, note TEXT,
                                       data_followup TEXT, data_ordine TEXT, agente TEXT,
                                       latitudine TEXT, longitudine TEXT, copiato_crm INTEGER DEFAULT 0)''')
-                        conn.commit()
-                        
-                        # 3. INSERIMENTO DATI (Mantenendo gli ID originali)
-                        # 'append' inserirà i dati. Poiché nel file excel c'è la colonna 'id',
-                        # SQLite userà quei numeri. Il contatore interno si aggiornerà automaticamente.
                         df_ripristino.to_sql('visite', conn, if_exists='append', index=False)
-                        
                     st.success("✅ Database ripristinato correttamente! Riavvio...")
                     time.sleep(2)
                     st.rerun()
-                else:
-                    st.error("❌ Il file non sembra un backup valido del CRM.")
             except Exception as e:
-                st.error(f"Errore durante il ripristino: {e}")
+                st.error(f"Errore: {e}")
 
 # --- LOGO FINALE ---
-st.write("") 
 st.divider() 
-
 col_f1, col_f2, col_f3 = st.columns([1, 2, 1]) 
-
 with col_f2:
     try:
         st.image("logo.jpg", use_container_width=True)
         st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; font-weight: bold;'>CRM MICHELONE APPROVED</p>", unsafe_allow_html=True)
-    except Exception:
+    except:
         st.info("✅ Michelone Approved")
