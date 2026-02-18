@@ -10,7 +10,7 @@ from streamlit_js_eval import get_geolocation
 import streamlit.components.v1 as components
 
 # --- 1. CONFIGURAZIONE E DATABASE ---
-st.set_page_config(page_title="CRM Michelone", page_icon="💼", layout="centered")
+st.set_page_config(page_title="CRM Michelino", page_icon="💼", layout="centered")
 
 # Inizializzazione chiavi di stato
 if 'lat_val' not in st.session_state: st.session_state.lat_val = ""
@@ -152,7 +152,7 @@ def salva_visita():
         st.error("⚠️ Inserisci almeno Cliente e Note!")
 
 # --- 3. INTERFACCIA UTENTE ---
-st.title("💼 CRM Michelone")
+st.title("💼 CRM Michelino")
 
 with st.expander("➕ REGISTRA NUOVA VISITA", expanded=False): 
     st.text_input("Nome Cliente", key="cliente_key")
@@ -457,4 +457,5 @@ with col_f2:
         st.image("logo.jpg", use_container_width=True)
         st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; font-weight: bold;'>CRM MICHELONE APPROVED</p>", unsafe_allow_html=True)
     except Exception:
+
         st.info("✅ Michelone Approved")
