@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import os
 import time
+import base64  # Aggiunto per gestire l'audio
 from datetime import datetime, timedelta
 from io import BytesIO
 from streamlit_js_eval import get_geolocation
@@ -65,6 +66,23 @@ def copia_negli_appunti(testo, id_bottone):
     </script>
     """
     components.html(html_code, height=45)
+
+# --- NUOVA FUNZIONE PER RIPRODURRE AUDIO AUTOMATICO ---
+def riproduci_audio_crm():
+    file_audio = "crm.mp3"
+    if os.path.exists(file_audio):
+        try:
+            with open(file_audio, "rb") as f:
+                data = f.read()
+                b64 = base64.b64encode(data).decode()
+                md = f"""
+                    <audio autoplay>
+                    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+                    </audio>
+                    """
+                st.markdown(md, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Errore audio: {e}")
 
 # --- 2. FUNZIONI DI SUPPORTO ---
 
@@ -155,6 +173,9 @@ def salva_visita():
 st.title("💼 CRM Michelino")
 
 with st.expander("➕ REGISTRA NUOVA VISITA", expanded=False): 
+    # >>> QUI PARTE L'AUDIO AUTOMATICO <<<
+    riproduci_audio_crm()
+    
     st.text_input("Nome Cliente", key="cliente_key")
     st.selectbox("Tipo Cliente", ["Cliente", "Prospect"], key="tipo_key")
     
@@ -368,7 +389,7 @@ if st.session_state.ricerca_attiva:
                         except: pass
 
                     if row['latitudine'] and row['longitudine']:
-                        mappa_url = f"https://www.google.com/maps?q={row['latitudine']},{row['longitudine']}"
+                        mappa_url = f"https://www.google.com/maps/search/?api=1&query={row['latitudine']},{row['longitudine']}"
                         st.markdown(f"📍 [Apri in Maps]({mappa_url})")
                     
                     cb_m, cb_d = st.columns([1, 1])
@@ -427,6 +448,7 @@ with st.expander("🛠️ AMMINISTRAZIONE E BACKUP"):
                         conn.commit()
                         
                         # 2. RICREAZIONE TABELLA PULITA (Con ID AutoIncrement)
+                        # Ricreo la struttura identica a quella iniziale, inclusa la colonna copiato_crm
                         c.execute('''CREATE TABLE visite 
                                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                                       cliente TEXT, localita TEXT, provincia TEXT,
@@ -435,7 +457,9 @@ with st.expander("🛠️ AMMINISTRAZIONE E BACKUP"):
                                       latitudine TEXT, longitudine TEXT, copiato_crm INTEGER DEFAULT 0)''')
                         conn.commit()
                         
-                        # 3. INSERIMENTO DATI
+                        # 3. INSERIMENTO DATI (Mantenendo gli ID originali)
+                        # 'append' inserirà i dati. Poiché nel file excel c'è la colonna 'id',
+                        # SQLite userà quei numeri. Il contatore interno si aggiornerà automaticamente.
                         df_ripristino.to_sql('visite', conn, if_exists='append', index=False)
                         
                     st.success("✅ Database ripristinato correttamente! Riavvio...")
@@ -454,7 +478,8 @@ col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
 
 with col_f2:
     try:
-        st.image("logo.jpg", use_container_width=True)
+        if os.path.exists("logo.jpg"):
+            st.image("logo.jpg", use_container_width=True)
         st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; font-weight: bold;'>CRM MICHELONE APPROVED</p>", unsafe_allow_html=True)
     except Exception:
         st.info("✅ Michelone Approved")
