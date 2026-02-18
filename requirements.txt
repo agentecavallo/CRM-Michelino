@@ -1,0 +1,6 @@
+streamlit
+pandas
+requests
+streamlit-js-eval
+xlsxwriter
+openpyxl
