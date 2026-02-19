@@ -4,7 +4,6 @@ import pandas as pd
 import requests
 import os
 import time
-import base64
 from datetime import datetime, timedelta
 from io import BytesIO
 from streamlit_js_eval import get_geolocation
@@ -67,25 +66,16 @@ def copia_negli_appunti(testo, id_bottone):
     """
     components.html(html_code, height=45)
 
-# --- NUOVA FUNZIONE AUDIO (HTML INJECTION) ---
+# --- NUOVA FUNZIONE AUDIO (PIÙ ROBUSTA) ---
 def riproduci_audio_crm():
     file_audio = "crm.mp3"
     if os.path.exists(file_audio):
-        try:
-            with open(file_audio, "rb") as f:
-                data = f.read()
-                b64 = base64.b64encode(data).decode()
-                # HTML nascosto che forza l'autoplay
-                md = f"""
-                    <audio autoplay="true">
-                    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
-                    </audio>
-                    """
-                st.markdown(md, unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Errore lettura file audio: {e}")
+        # Utilizza il player nativo di Streamlit con autoplay
+        # Nota: Su alcuni browser mobili l'autoplay potrebbe essere comunque bloccato
+        # dalle impostazioni di risparmio dati o privacy.
+        st.audio(file_audio, format="audio/mp3", autoplay=True)
     else:
-        st.warning("⚠️ File 'crm.mp3' non trovato nella cartella!")
+        st.warning("⚠️ File 'crm.mp3' non trovato! Controlla la cartella.")
 
 # --- 2. FUNZIONI DI SUPPORTO ---
 
@@ -176,7 +166,7 @@ def salva_visita():
 st.title("💼 CRM Michelino")
 
 with st.expander("➕ REGISTRA NUOVA VISITA", expanded=False): 
-    # >>> TENTA RIPRODUZIONE AUDIO AUTOMATICA <<<
+    # >>> QUI PARTE L'AUDIO AUTOMATICO <<<
     riproduci_audio_crm()
     
     st.text_input("Nome Cliente", key="cliente_key")
